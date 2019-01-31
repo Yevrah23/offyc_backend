@@ -35,6 +35,30 @@ class user_m extends CI_Model{
 
 	}
 
+	public function get_proposals_user($id){
+		$return = [];
+		$this->db->select('tblproject_proposals.*,tbluserinfo.*');
+		$this->db->from('tblproject_proposals');
+		$this->db->join('tbluserinfo', 'tbluserinfo.ui_school_id = tblproject_proposals.user_id');
+		$this->db->where('tblproject_proposals.user_id',$id);
+		$this->db->where('tblproject_proposals.proposal_status != 0');
+		$query = $this->db->get()->result();
+
+		if($query){
+			foreach ($query as $key) {
+				$key->budget_total = $key->budget_ustp + $key->budget_partner;
+			}
+			$return[0] = true;
+			$return[1] = $query;
+		}else{
+			$return[0] = false;
+
+		}
+
+		return $return;
+
+	}
+
 	public function login($data){
 		$response = [];
 		$query =  $this->db->select('*')->from('tbluser')->where('user_school_id',$data['username'])->where('user_pass',$data['password'])->get();
@@ -122,6 +146,42 @@ class user_m extends CI_Model{
 
 
 	}
+	public function update_proposal($details,$id){
+		$this->db->where('tblproject_proposals.proposal_id',$id);
+		$p_details = $this->db->update('tblproject_proposals',$details);
+
+
+		if ($p_details){
+			$log = array(
+				'id' => $details['user_id'],
+				'type' => 'Proposal Submission Revision'
+			);
+			$this->save_log($log);
+
+			$event = array (
+				'start' => date('c'),
+				'title' => $details['proposal_title'],
+				'color' => 0
+			);
+			$this->add_event($event);
+
+			$notif = array (
+				'notification_sender' => $details['user_id'],
+				'notification_receiver' => '2015101246',
+				'notification_status' => 0,
+				'notif_type_id' => 1
+			);
+			$this->set_notifs($notif);
+
+
+
+			return true;
+		}else{
+			return false;
+		}
+
+
+	}
 
 	public function save_log($log){
 		$query = $this->db->insert('tbltrans_log',
@@ -165,7 +225,7 @@ class user_m extends CI_Model{
 			if (isset($_FILES['upload'])) {
             $file_info = pathinfo($_FILES['upload']['name']);                    // Uploaded Image Info
             $maxsize = 2097152;             // Restricts 2MB images only
-            $bool_image_size;               // Stores boolean value for image size
+            $bool_image_size = true;               // Stores boolean value for image size
             $bool_image_type = true;               // Stores boolean value for image type/format
             $errors[0]="";$errors[1]="";    // Stores string value of error/s
             // $file_types = array(            //
@@ -173,14 +233,6 @@ class user_m extends CI_Model{
             //     'image/jpg',                //  except for jpeg,jpg,png
             //     'image/png'                 //
             // );
-
-            if(($_FILES['upload']['size'] > $maxsize) || ($_FILES['upload']['size'] === 0) ) {
-                $errors[0] = 'File too large. File must be less than 2 megabytes.';              //Checks if the image 
-                $bool_image_size = false;                                                       //uploaded size is 2MB
-            }
-            else {
-                $bool_image_size = true;
-            }
 
             // if(!in_array($_FILES['image']['type'], $file_types) && (!empty($_FILES['image']['type'])) ) {
             //     $errors[1] = 'Invalid file type. Only JPG, JPEG, and PNG types are accepted.';           //Checks if the image
@@ -194,11 +246,14 @@ class user_m extends CI_Model{
                 $ext = $file_info['extension']; // get the extension of the file or the file type
                 // $newname = $_SESSION['id'].'_pic.'.$ext; 
                 $filename = $data['folder'];
-                $newname = $data['file_type'].'.'.$ext; 
+                $newname = 'proposal'.'.'.$ext; 
 
                 if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/')) {
 					mkdir('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/', 0777, true);
                 	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
+				}else if(file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname)){
+                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
+                	unlink($target);
 				}else{
                 	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
 				}
@@ -216,7 +271,11 @@ class user_m extends CI_Model{
                 //     }
                 //     $this->db->where('user_id',$field['user_id']);
                 //     $this->db->update('tbl_photo_upload',$field);
-                    move_uploaded_file( $_FILES['upload']['tmp_name'], $target);                           
+                    move_uploaded_file( $_FILES['upload']['tmp_name'], $target);
+                    $this->db->where('tblproject_proposals.proposal_title',$filename);
+		            $cover_update = $this->db->update('tblproject_proposals',array(
+		            		'proposal_directory' => '../../../assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname,
+		            	));                           
                 // }
                 // else{
                 //     $this->db->insert('tbl_photo_upload',$field);
@@ -246,6 +305,35 @@ class user_m extends CI_Model{
 			}
 		}
 		return $return;
+	}
+
+	public function implementation_status($data){
+		$this->db->where('tblproject_proposals.proposal_id',$data['prop_id']);
+		$query = $this->db->update('tblproject_proposals',array('implementing'=>$data['status']));
+
+			if($query){
+				if($data['status'] == 2){
+					if($this->update_project_status($data)){
+						return true;
+				}
+				return false;
+			}else{
+				return false;
+			}
+
+		}
+	}
+
+	public function update_project_status($data){
+		$status = $data['status'];
+		$this->db->where('tblproject_proposals.proposal_id',$data['prop_id']);
+		$this->db->where("tblproject_proposals.proposal_status < '$status'");
+		$query = $this->db->update('tblproject_proposals',array('proposal_status' => 4));
+		if ($query){
+			return true;
+		}else{
+			return false;
+		}
 	}
 }
 ?>

@@ -21,6 +21,7 @@ class admin_m extends CI_Model{
 		$this->db->from('tblproject_proposals');
 		$this->db->join('tbluserinfo', 'tbluserinfo.ui_school_id = tblproject_proposals.user_id');
 		$this->db->where('tblproject_proposals.proposal_status != 0');
+		$this->db->where('tblproject_proposals.proposal_status != 6');
 		$query = $this->db->get();
 
 
@@ -103,6 +104,7 @@ class admin_m extends CI_Model{
 		$response[1] = $props;
 		return $response;
 	}
+
 	public function get_proposal($id){
 		$this->db->select('tblproject_proposals.*,tbluserinfo.*');
 		$this->db->from('tblproject_proposals');
@@ -126,6 +128,8 @@ class admin_m extends CI_Model{
 		}
 		return $query;
 	}
+
+
 
 	public function proposal_approval($details){
 		// var_dump($details['id']);
@@ -155,7 +159,7 @@ class admin_m extends CI_Model{
 		if ($get){
 			$id = $this->db->select('user_id')->from('tblproject_proposals')->where('proposal_id',$details['id'])->get()->row();
 			$notif = array (
-				'notification_sender' => 'admin',
+				'notification_sender' => '2015101246',
 				'notification_receiver' => $id->user_id,
 				'notification_status' => 0
 			);
@@ -209,7 +213,6 @@ class admin_m extends CI_Model{
 
 	
 	public function update_project_status($data){
-		var_dump($data);
 		$status = $data['status'];
 		$this->db->where('tblproject_proposals.proposal_id',$data['id']);
 		$this->db->where("tblproject_proposals.proposal_status < '$status'");
@@ -363,6 +366,41 @@ class admin_m extends CI_Model{
 
 	        return 'File Upload Success';
 			
+		}
+	}
+
+	public function revise_proposal($data){
+		$this->db->where('tblproject_proposals.proposal_id',$data['prop_id']);
+		$query = $this->db->update('tblproject_proposals',array(
+			'comment' => $data['comment'],
+			'proposal_status' => '6'
+		));
+
+		if($query){
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	public function get_revised_proposals($data = null){
+		if ($data != null){
+			$this->db->select('tblproject_proposals.*,tbluserinfo.*');
+			$this->db->from('tblproject_proposals');
+			$this->db->join('tbluserinfo', 'tbluserinfo.ui_school_id = tblproject_proposals.user_id');
+			$this->db->where('tblproject_proposals.user_id',$data);
+			$this->db->where('tblproject_proposals.proposal_status',6);
+			$query = $this->db->get()->result();
+		}else{
+			$this->db->select('tblproject_proposals.*,tbluserinfo.*');
+			$this->db->from('tblproject_proposals');
+			$this->db->join('tbluserinfo', 'tbluserinfo.ui_school_id = tblproject_proposals.user_id');
+			$this->db->where('tblproject_proposals.proposal_status',6);
+			$query = $this->db->get()->result();
+		}
+
+		if ($query){
+			return $query;
 		}
 	}
 }

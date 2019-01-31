@@ -171,25 +171,6 @@ class Users extends REST_Controller {
         // }
         // var_dump($this->post());
         $jwtData = $this->objOfJwt->DecodeToken($this->post('token'));
-
-        // var_dump($_FILES);
-        // $date_s = split('-', $this->post('date_start'),2);
-        // $date_e = split('-', $this->post('date_end'),2);
-        // $date_s = "";
-        // $date_e = "";
-        // for ($i=0; $i < 10 ; $i++) { 
-        //     if($i == 9){
-        //         $date_s .= $this->post('date_start')[$i]+1;
-        //         $date_e .= $this->post('date_end')[$i]+1;            
-        //     }else{
-        //         $date_s .= $this->post('date_start')[$i];
-        //         $date_e .= $this->post('date_end')[$i];
-        //     }
-
-
-        // }
-        // var_dump($_FILES);
-        // var_dump($this->post());
         $proposal_details = array(
             'user_id' => $jwtData['id'],
             'proposal_title' => $this->post('title'),        
@@ -214,8 +195,43 @@ class Users extends REST_Controller {
         // $this->response(true);
 
     }
+        public function update_proposal_post(){
+        $response = [];
+        // $props = $this->admin->get_all_proposals();
+        // foreach ($row => $props) {
+        //     if ($row->proposal_title === $this->post('title')){
+        //         $response[0] = 'repeat';
+        //     }
+        // }
+        // var_dump($this->post());
+        $jwtData = $this->objOfJwt->DecodeToken($this->post('token'));
+        $proposal_details = array(
+            'user_id' => $jwtData['id'],
+            'proposal_title' => $this->post('title'),        
+            'proposal_beneficiaries' => $this->post('b_target'),        
+            'proposal_bene_gender' => $this->post('b_gender'),        
+            'proposal_date_start' =>$this->post('date_start'),        
+            'proposal_date_end' => $this->post('date_end'),        
+            'proposal_venue' => $this->post('venue'),
+            'proposal_directory' => '../../../assets/uploaded_files/'.$jwtData['college'].'/'.$jwtData['department'].'/'.$this->post('title').'/',
+            'type_id' => $this->post('trans_type'),
+            'proposal_partner'=> $this->post('partner'),
+            'proponents'=> $this->post('proponents'),
+            'accreditation_level'=> $this->post('accre_level'),
+            'total_hours'=> $this->post('total_hours'),
+            'budget_ustp'=> $this->post('budget_ustp'),
+            'budget_partner'=> $this->post('budget_partner'),
+            'proposal_status' => 0
+        );
+
+        $result = $this->user->update_proposal($proposal_details,$this->post('prop_id'));
+        // $response[1] = $result;
+        $this->response($result);
+        // $this->response(true);
+
+    }
         
-        public function getNotifs_post(){
+    public function getNotifs_post(){
         $result = $this->user->get_notifs($this->post('id'));
 
         $this->response($result);
@@ -260,6 +276,16 @@ class Users extends REST_Controller {
     public function get_proposal_post(){
         $id = $this->post('id');
         $result = $this->admin->get_proposal($id);
+        $this->response($result);
+    }
+
+    public function get_revised_proposals_get(){
+        $result = $this->admin->get_revised_proposals();
+        $this->response($result);
+
+    }
+    public function get_revised_proposals_post(){
+        $result = $this->admin->get_revised_proposals($this->post('user_id'));
         $this->response($result);
     }
 
@@ -328,7 +354,7 @@ class Users extends REST_Controller {
     }
 
     public function moa_c_upload_post(){
-        var_dump($_FILES);
+        // var_dump($this->post());
         $data = array(
             'id' => $this->post('id'),
             'folder' => $this->post('folder'),
@@ -336,6 +362,33 @@ class Users extends REST_Controller {
             'user_id' => $this->post('user_id'),
         );
         $result = $this->admin->moa_c_upload($data);
+
+        $this->response($result);
+    }
+
+    public function revise_proposal_post(){
+        $data = array(
+            'prop_id' =>  $this->post('prop_id'),
+            'comment' => $this->post('comment')
+        );
+
+        $result = $this->admin->revise_proposal($data);
+
+        $this->response($result);
+    }
+
+    public function get_proposals_user_post(){
+        $result = $this->user->get_proposals_user($this->post('user_id'));
+
+        $this->response($result);
+    }
+
+    public function implementation_status_post(){
+        $data = array(
+            'prop_id' => $this->post('prop_id'),
+            'status' => $this->post('status')
+        );
+        $result = $this->user->implementation_status($data);
         $this->response($result);
     }
     // public function logout(){
