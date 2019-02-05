@@ -84,18 +84,6 @@ class admin_m extends CI_Model{
 			foreach ($query->result() as $row) {
 				$row->proposal_status = "Pending";
 				array_push($props, $row);
-				// var_dump($row->ui_college);
-				// if($row->ui_college === 'CITC'){
-				// 	array_push($CITC, $row);
-				// }else if($row->ui_college === 'CEA'){
-				// 	array_push($CEA, $row);
-				// }else if($row->ui_college === 'CSM'){
-				// 	array_push($CSM, $row);
-				// }else if($row->ui_college === 'CSTE'){
-				// 	array_push($CSTE, $row);
-				// }else if($row->ui_college === 'COT'){
-				// 	array_push($COT, $row);
-				// }
 				$i++;
 			}
 		}else{
@@ -161,16 +149,24 @@ class admin_m extends CI_Model{
 			$notif = array (
 				'notification_sender' => '2015101246',
 				'notification_receiver' => $id->user_id,
-				'notification_status' => 0
+				'notification_status' => 0,
+				'notif_type_id' => 2
 			);
 			// var_dump($notif);
 			$this->set_notifs($notif);
 
 			$log = array(
-				'id' => $details['id'],
+				'id' => $id->user_id,
 				'type' => 'Proposal Acceptance'
 			);
 			$this->save_log($log);
+
+			$log = array(
+				'id' => '2015101246',
+				'type' => 'Proposal Approval'
+			);
+			$this->save_log($log);
+
 
 			$data = array(
 				'id' => $details['id'],
@@ -187,6 +183,7 @@ class admin_m extends CI_Model{
 	}
 
 	public function get_unregistered(){
+		$response = [];
 		$this->db->select('tbluser.user_school_id, tbluserinfo.*');
 		$this->db->from('tbluser');
 		$this->db->join('tbluserinfo','tbluser.user_school_id = tbluserinfo.ui_school_id');
@@ -194,9 +191,12 @@ class admin_m extends CI_Model{
 		$query = $this->db->get()->result();
 
 		if($query){
-			return $query;
+			$response[0] = true;
+			$response[1] = $query;
+			return $response;
 		}else{	
-			return false;
+			$response[0] = false;
+			return $response;
 		}
 	}
 
@@ -204,10 +204,18 @@ class admin_m extends CI_Model{
 		$this->db->where('user_school_id',$data['id']);
 		$query = $this->db->update('tbluser',array('approved'=>$data['status']));
 
+		$response = [];
 		if($query){
-			return $data['status'];
-		}else{
-			return false;
+			$log = array(
+				'id' => $data['id'],
+				'type' => 'Registration Approval'
+			);
+			$this->save_log($log);
+			$response[0] = true;
+			return $response;
+		}else{	
+			$response[0] = false;
+			return $response;
 		}
 	}
 
@@ -375,6 +383,18 @@ class admin_m extends CI_Model{
 			'comment' => $data['comment'],
 			'proposal_status' => '6'
 		));
+
+		$get = $this->db->select('*')->from('tblproject_proposals')->where('proposal_id',$data['prop_id'])->get()->row();
+
+
+		$notif = array (
+			'notification_sender' => '2015101246',
+			'notification_receiver' => $get->user_id,
+			'notification_status' => 0,
+			'notif_type_id' => 3
+		);
+		// var_dump($notif);
+		$this->set_notifs($notif);
 
 		if($query){
 			return true;

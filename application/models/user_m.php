@@ -31,6 +31,29 @@ class user_m extends CI_Model{
 			}
 		}
 
+	}
+
+	public function update_user($info, $cred){
+
+		$query = $this->db->select('*')->from('tbluser')->where('user_school_id', $info['ui_school_id'])->get();
+
+		if ($query->num_rows() > 0){
+			$this->db->where('tbluserinfo.ui_school_id',$info['ui_school_id']);
+			$update_info = $this->db->update('tbluserinfo',$info);
+
+
+			$this->db->where('tbluser.user_school_id',$info['ui_school_id']);
+			$update_pass = $this->db->update('tbluser',$cred);
+
+
+			if ($update_info && $update_pass){
+				return true;
+			}else{
+				return false;
+			}
+
+		}
+
 		
 
 	}
@@ -62,7 +85,7 @@ class user_m extends CI_Model{
 	public function login($data){
 		$response = [];
 		$query =  $this->db->select('*')->from('tbluser')->where('user_school_id',$data['username'])->where('user_pass',$data['password'])->get();
-		if ($query->num_rows() > 0){
+		if ($query->num_rows() == 1){
 			$log = array(
 				'id' => $data['username'],
 				'type' => 'Login'
@@ -75,23 +98,25 @@ class user_m extends CI_Model{
 				$response[0] = true;
 				$response[1] = $query->row();
 				$response[2] = $info->row();
+				$response['message'] = 'Successfully Logged In';
 			}else if ($query->row()->approved == 0){
 				$response[0] = false;
-				$response[1] = 'Your Account has not been approved yet. Please wait for confirmation' ;
+				$response['message'] = 'Your Account has not been approved yet. Please wait for confirmation' ;
 			}else{
 				$response[0] = false;
-				$response[1] = 'Your request to register an account has been denied for some reason. Please visit the Extension Office to reconcile this matter';
+				$response['message'] = 'Your request to register an account has been denied for some reason. Please visit the Extension Office to reconcile this matter';
 			}
 
 			
 			return $response;
 		}else{
 			$response[0] = false;
-			$response[1] = 'Username/Password Incorrect. Please check your credentials entered and try again';
+			$response['message'] = 'Username/Password Incorrect. Please check your credentials entered and try again';
 			return $response;
 		}
 
 	}
+
 	public function check($id){
 		$query = $this->db->select('*')->from('tbluser')->where('user_school_id',$id)->get();
 		if ($query->num_rows() > 0){
@@ -103,7 +128,21 @@ class user_m extends CI_Model{
 
 	public function get_allusers(){
 		return($this->db->get('tbluser')->result());
+	}
 
+	public function get_user($id){
+		$this->db->select('tbluserinfo.*,tbluser.user_pass');
+		$this->db->from('tbluserinfo');
+		$this->db->join('tbluser','tbluserinfo.ui_school_id = tbluser.user_school_id');
+		$this->db->where('tbluserinfo.ui_school_id',$id);
+
+		$query = $this->db->get()->row();
+
+		if($query){
+			return $query;
+		}else{
+			return false;
+		}
 	}
 
 
@@ -111,7 +150,7 @@ class user_m extends CI_Model{
 
 
 	//////////////////// Transactions ///////////////////////////////////
-	public function submit_proposal($details){
+	public function submit_proposal($details,$college){
 		$p_details = $this->db->insert('tblproject_proposals',$details);
 
 
@@ -125,7 +164,8 @@ class user_m extends CI_Model{
 			$event = array (
 				'start' => date('c'),
 				'title' => $details['proposal_title'],
-				'color' => 0
+				'color' => 0,
+				'college' => $college
 			);
 			$this->add_event($event);
 
@@ -158,18 +198,12 @@ class user_m extends CI_Model{
 			);
 			$this->save_log($log);
 
-			$event = array (
-				'start' => date('c'),
-				'title' => $details['proposal_title'],
-				'color' => 0
-			);
-			$this->add_event($event);
 
 			$notif = array (
 				'notification_sender' => $details['user_id'],
 				'notification_receiver' => '2015101246',
 				'notification_status' => 0,
-				'notif_type_id' => 1
+				'notif_type_id' => 4
 			);
 			$this->set_notifs($notif);
 
@@ -228,25 +262,13 @@ class user_m extends CI_Model{
             $bool_image_size = true;               // Stores boolean value for image size
             $bool_image_type = true;               // Stores boolean value for image type/format
             $errors[0]="";$errors[1]="";    // Stores string value of error/s
-            // $file_types = array(            //
-            //     'image/jpeg',               //  Restricts other formats
-            //     'image/jpg',                //  except for jpeg,jpg,png
-            //     'image/png'                 //
-            // );
 
-            // if(!in_array($_FILES['image']['type'], $file_types) && (!empty($_FILES['image']['type'])) ) {
-            //     $errors[1] = 'Invalid file type. Only JPG, JPEG, and PNG types are accepted.';           //Checks if the image
-            //     $bool_image_type = false;                                                               //type or format is acceptable
-            // }
-            // else {
-            //     $bool_image_type = true;
-            // }
 
             if($bool_image_size && $bool_image_type) {
                 $ext = $file_info['extension']; // get the extension of the file or the file type
                 // $newname = $_SESSION['id'].'_pic.'.$ext; 
                 $filename = $data['folder'];
-                $newname = 'proposal'.'.'.$ext; 
+                $newname = $data['file_type'].'.'.$ext; 
 
                 if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/')) {
 					mkdir('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/', 0777, true);
@@ -257,36 +279,59 @@ class user_m extends CI_Model{
 				}else{
                 	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
 				}
-                // $link = 'assets/img/profile_pics/'.$newname;
 
-                // $field = array(
-                //     'user_id' => $this->session->userdata('id'),
-                //     'photo_path' => $link
-                // );
-
-                // $query = $this->db->select('*')->from('tbl_photo_upload')->where('user_id',$field['user_id'])->get();
-                // if($query->num_rows()>0){
-                //     if(!$bool_image_size && !$bool_image_type) {
-                //         unlink($target);
-                //     }
-                //     $this->db->where('user_id',$field['user_id']);
-                //     $this->db->update('tbl_photo_upload',$field);
                     move_uploaded_file( $_FILES['upload']['tmp_name'], $target);
                     $this->db->where('tblproject_proposals.proposal_title',$filename);
 		            $cover_update = $this->db->update('tblproject_proposals',array(
 		            		'proposal_directory' => '../../../assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname,
 		            	));                           
-                // }
-                // else{
-                //     $this->db->insert('tbl_photo_upload',$field);
-                //     move_uploaded_file( $_FILES['image']['tmp_name'], $target);                
-                // }
+
             } 
             else {
             	return 'Some Error Occured';
-                // $_SESSION['error_image_upload'] = $errors[0].'\n'.$errors[1];
-                // redirect('Applicant/user_settings');
-                //echo json_encode($errors);
+            }
+            return 'File Upload Success';
+        }
+
+		}
+		
+	}
+
+	public function upload_photo($data){
+		if ($query){
+			if (isset($_FILES['upload'])) {
+            $file_info = pathinfo($_FILES['upload']['name']);                    // Uploaded Image Info
+            $maxsize = 2097152;             // Restricts 2MB images only
+            $bool_image_size = true;               // Stores boolean value for image size
+            $bool_image_type = true;               // Stores boolean value for image type/format
+            $errors[0]="";$errors[1]="";    // Stores string value of error/s
+
+
+            if($bool_image_size && $bool_image_type) {
+                $ext = $file_info['extension']; // get the extension of the file or the file type
+                // $newname = $_SESSION['id'].'_pic.'.$ext; 
+                $filename = $data['user_id'];
+                $newname = 'profile_pic'.'.'.$ext; 
+
+                if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/')) {
+					mkdir('C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/', 0777, true);
+                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/'.$newname;
+				}else if(file_exists('C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/'.$newname)){
+                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/'.$newname;
+                	unlink($target);
+				}else{
+                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/img/'.$filename.'/'.$newname;
+				}
+
+                    move_uploaded_file( $_FILES['upload']['tmp_name'], $target);
+                    $this->db->where('tbluserinfo.ui_school_id',$data['user_id']);
+		            $cover_update = $this->db->update('tbluserinfo',array(
+		            		'photo_directory' => '../../../assets/img/'.$filename.'/'.$newname,
+		            	));                           
+
+            } 
+            else {
+            	return 'Some Error Occured';
             }
             return 'File Upload Success';
         }
@@ -313,15 +358,19 @@ class user_m extends CI_Model{
 
 			if($query){
 				if($data['status'] == 2){
-					if($this->update_project_status($data)){
+					$status = [];
+					$status['prop_id'] = $data['prop_id'];
+					$status['status'] = 4;
+					if($this->update_project_status($status)){
 						return true;
-				}
-				return false;
-			}else{
-				return false;
-			}
+					}
 
-		}
+				}else{
+					return true;
+				}
+			}else{
+				return true;
+			}
 	}
 
 	public function update_project_status($data){
@@ -330,6 +379,17 @@ class user_m extends CI_Model{
 		$this->db->where("tblproject_proposals.proposal_status < '$status'");
 		$query = $this->db->update('tblproject_proposals',array('proposal_status' => 4));
 		if ($query){
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	public function update_report($data,$id){
+		$this->db->where('tblproject_proposals.proposal_id',$id);
+		$query = $this->db->update('tblproject_proposals',$data);
+
+		if($query){
 			return true;
 		}else{
 			return false;
