@@ -103,18 +103,40 @@ class admin_m extends CI_Model{
 		return $query;
 	}
 
-	public function get_events(){
-		$query = $this->db->get('tbl_events')->result();
-		foreach ($query as $row) {
-			if($row->color == 0){
-				$row->color = 'red';
-			}else if ($row->color == 1){
-				$row->color = 'green';
-			}else {
-				$row->color = 'blue';
+	public function get_events($college = null){
+		if($college == null){
+			$query = $this->db->get('tbl_events')->result();
+			foreach ($query as $row) {
+				if($row->college == 'CITC'){
+					$row->color = 'rgb(46,49,49)';
+				}else if ($row->college == 'CEA'){
+					$row->color = 'rgb(150,40,27)';
+				}else if ($row->college == 'CSM'){
+					$row->color = 'rgb(38,166,91)';
+				}else if ($row->college == 'COT'){
+					$row->color = 'rgb(217,30,24)';
+				}else if ($row->college == 'CSTE'){
+					$row->color = 'rgb(30,139,195)';
+				}
 			}
+			return $query;
+		}else{
+			$query = $this->db->select('*')->from('tbl_events')->where('tbl_events.college',$college)->get()->result();
+			foreach ($query as $row) {
+				if($row->college == 'CITC'){
+					$row->color = 'rgb(46,49,49)';
+				}else if ($row->college == 'CEA'){
+					$row->color = 'rgb(150,40,27)';
+				}else if ($row->college == 'CSM'){
+					$row->color = 'rgb(38,166,91)';
+				}else if ($row->college == 'COT'){
+					$row->color = 'rgb(217,30,24)';
+				}else if ($row->college == 'CSTE'){
+					$row->color = 'rgb(30,139,195)';
+				}
+			}
+			return $query;
 		}
-		return $query;
 	}
 
 
@@ -188,6 +210,7 @@ class admin_m extends CI_Model{
 		$this->db->from('tbluser');
 		$this->db->join('tbluserinfo','tbluser.user_school_id = tbluserinfo.ui_school_id');
 		$this->db->where('tbluser.approved',0);
+		$this->db->or_where('tbluser.approved',3);
 		$query = $this->db->get()->result();
 
 		if($query){
@@ -202,15 +225,10 @@ class admin_m extends CI_Model{
 
 	public function approve_registration($data){
 		$this->db->where('user_school_id',$data['id']);
-		$query = $this->db->update('tbluser',array('approved'=>$data['status']));
+		$query = $this->db->update('tbluser',array('approved'=>$data['status'],'user_pass'=>'123'));
 
 		$response = [];
 		if($query){
-			$log = array(
-				'id' => $data['id'],
-				'type' => 'Registration Approval'
-			);
-			$this->save_log($log);
 			$response[0] = true;
 			return $response;
 		}else{	
@@ -334,11 +352,11 @@ class admin_m extends CI_Model{
 		            $moext = $moa_info['extension']; // get the extension of the file or the file type
 		            $moaname = 'notarized-moa'.'.'.$moext; 
 
-		            if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/')) {
-						mkdir('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/', 0777, true);
-		            	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$moaname;
+		            if (!file_exists('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/')) {
+						mkdir('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/', 0777, true);
+		            	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$moaname;
 					}else{
-		            	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$moaname;
+		            	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$moaname;
 					}
 		            move_uploaded_file( $_FILES['moa']['tmp_name'], $target);
 		            
@@ -355,11 +373,11 @@ class admin_m extends CI_Model{
 		            $covext = $cover_info['extension']; // get the extension of the file or the file type
 		            $covname = 'signed-cover'.'.'.$covext; 
 
-		            if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/')) {
-						mkdir('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/', 0777, true);
-		            	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$covname;
+		            if (!file_exists('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/')) {
+						mkdir('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/', 0777, true);
+		            	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$covname;
 					}else{
-		            	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$covname;
+		            	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$foldername.'/'.$covname;
 					}
 		            move_uploaded_file( $_FILES['cover']['tmp_name'], $target); 
 
@@ -423,5 +441,90 @@ class admin_m extends CI_Model{
 			return $query;
 		}
 	}
+
+	public function get_project_count(){
+		$chart = [];
+
+
+
+		$first = 'SELECT tbluserinfo.ui_college College,COUNT(tblproject_proposals.proposal_id) Count FROM tblproject_proposals 
+		INNER JOIN tbluserinfo ON tbluserinfo.ui_school_id = tblproject_proposals.user_id 
+		WHERE tblproject_proposals.proposal_status = "5" AND tblproject_proposals.proposal_date_start >= "2019-01" AND tblproject_proposals.proposal_date_end <= "2019-03"
+		GROUP BY tbluserinfo.ui_college';
+		$second = 'SELECT tbluserinfo.ui_college College,COUNT(tblproject_proposals.proposal_id) Count FROM tblproject_proposals 
+		INNER JOIN tbluserinfo ON tbluserinfo.ui_school_id = tblproject_proposals.user_id 
+		WHERE tblproject_proposals.proposal_status = "5" AND tblproject_proposals.proposal_date_start >= "2019-04" AND tblproject_proposals.proposal_date_end <= "2019-06"
+		GROUP BY tbluserinfo.ui_college';
+		$third = 'SELECT tbluserinfo.ui_college College,COUNT(tblproject_proposals.proposal_id) Count FROM tblproject_proposals 
+		INNER JOIN tbluserinfo ON tbluserinfo.ui_school_id = tblproject_proposals.user_id 
+		WHERE tblproject_proposals.proposal_status = "5" AND tblproject_proposals.proposal_date_start >= "2019-07" AND tblproject_proposals.proposal_date_end <= "2019-09"
+		GROUP BY tbluserinfo.ui_college';
+		$fourth = 'SELECT tbluserinfo.ui_college College,COUNT(tblproject_proposals.proposal_id) Count FROM tblproject_proposals 
+		INNER JOIN tbluserinfo ON tbluserinfo.ui_school_id = tblproject_proposals.user_id 
+		WHERE tblproject_proposals.proposal_status = "5" AND tblproject_proposals.proposal_date_start >= "2019-10" AND tblproject_proposals.proposal_date_end <= "2019-12"
+		GROUP BY tbluserinfo.ui_college';
+
+		$quarter1 = $this->db->query($first)->result();
+		$quarter2 = $this->db->query($second)->result();
+		$quarter3 = $this->db->query($third)->result();
+		$quarter4 = $this->db->query($fourth)->result();
+
+		array_push($chart, $quarter1);
+		array_push($chart, $quarter2);
+		array_push($chart, $quarter3);
+		array_push($chart, $quarter4);
+
+		return $chart;
+
+	}
+
+	public function archive_db(){
+		$date = date('Y-01');
+		$year = date('Y') - 1;
+		$this->db->select('*');
+		$this->db->from('tblproject_proposals');
+		$this->db->where("tblproject_proposals.proposal_date_start < '$date'");
+		$get = $this->db->get()->result();
+
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		
+		foreach ($get as $key) {
+			$exp = explode('/', $key->proposal_directory);
+			$exp[4] = $year;
+			$key->proposal_directory = implode('/', $exp);
+		}
+
+		foreach ($get as $key) {
+			$moa = explode('/', $key->moa_directory);
+			$moa[4] = $year;
+			$key->moa_directory = implode('/', $moa);
+		}
+
+		foreach ($get as $key) {
+			$cov = explode('/', $key->cover_directory);
+			$cov[4] = $year;
+			$key->cover_directory = implode('/', $cov);
+		}
+
+		foreach ($get as $key) {
+			$rep = explode('/', $key->report_directory);
+			$rep[4] = $year;
+			$key->report_directory = implode('/', $rep);
+		}
+
+
+
+		foreach ($get as $key) {
+			$this->db->insert('tbl_archive',$key);
+		}
+
+
+		$erase = $this->db->truncate('tblproject_proposals');
+
+		$got = $this->db->get('tbl_archive')->result();
+		rename("C:/xampp/htdocs/offyc/src/assets/uploaded_file/", "C:/xampp/htdocs/offyc/src/assets/$year/");
+		return $got;
+	}
+
 }
 ?>

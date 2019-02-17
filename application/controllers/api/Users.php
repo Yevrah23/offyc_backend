@@ -61,6 +61,7 @@ class Users extends REST_Controller {
                 'mname' => $result[2]->ui_Mname,
                 'lname' => $result[2]->ui_Lname
             );
+            // $this->session->set_userdata($session);
             // $tokenData['id'] = $result[1]->user_school_id;
             // $tokenData['type'] = $result[1]->user_type;
             $jwtToken = $this->objOfJwt->GenerateToken($session);
@@ -120,6 +121,7 @@ class Users extends REST_Controller {
     }
 
     public function check_login_post(){
+        // var_dump($_SESSION);
         $response = [];
         $user_data = [];
 
@@ -151,9 +153,9 @@ class Users extends REST_Controller {
             'proposal_beneficiaries' => $this->post('b_target'),        
             'proposal_bene_gender' => $this->post('b_gender'),        
             'proposal_date_start' =>$this->post('date_start'),        
-            'proposal_date_end' => $this->post('date_end'),        
+            'proposal_date_end' => $this->post('date_end'),
+            'proposal_program' => $this->post('program'),        
             'proposal_venue' => $this->post('venue'),
-            'proposal_directory' => '../../../assets/uploaded_files/'.$jwtData['college'].'/'.$jwtData['department'].'/'.$this->post('title').'/'.$this->post('fileName'),
             'type_id' => $this->post('trans_type'),
             'proposal_partner'=> $this->post('partner'),
             'proponents'=> $this->post('proponents'),
@@ -177,7 +179,8 @@ class Users extends REST_Controller {
             'proposal_beneficiaries' => $this->post('b_target'),        
             'proposal_bene_gender' => $this->post('b_gender'),        
             'proposal_date_start' =>$this->post('date_start'),        
-            'proposal_date_end' => $this->post('date_end'),        
+            'proposal_date_end' => $this->post('date_end'),
+            'proposal_program' => $this->post('program'),        
             'proposal_venue' => $this->post('venue'),
             'proposal_directory' => '../../../assets/uploaded_files/'.$jwtData['college'].'/'.$jwtData['department'].'/'.$this->post('title').'/',
             'type_id' => $this->post('trans_type'),
@@ -252,6 +255,13 @@ class Users extends REST_Controller {
 
     public function get_events_get(){
         $result = $this->admin->get_events();
+        $this->response($result);
+    }
+
+    public function get_events_post(){
+        $college = $this->post('college');
+
+        $result = $this->admin->get_events($college);
         $this->response($result);
     }
 
@@ -354,25 +364,17 @@ class Users extends REST_Controller {
     }
 
     public function update_user_post(){
+        $id = $this->post('id');
         $info = array (
-            'ui_school_id' => $this->post('id'),
-            'ui_college' => $this->post('college'),
-            'ui_dept' => $this->post('dept'),
             'ui_email' => $this->post('email'),
-            'ui_position' => $this->post('position'),
-            'ui_Fname'=> $this->post('fName'),
-            'ui_Mname'=> $this->post('mName'),
-            'ui_Lname'=> $this->post('lName'),
-            'ui_gender'=> $this->post('gender'),
-            'ui_contact_number'=> $this->post('cNumber'),
-            'ui_birthday' => $this->post('bDay')
+            'ui_contact_number'=> $this->post('cNumber')
         );
 
         $cred = array (
             'user_pass' => $this->post('pass'),
         );
 
-        $result = $this->user->update_user($info,$cred);
+        $result = $this->user->update_user($info,$cred,$id);
         $this->response($result);
     }
     
@@ -398,6 +400,64 @@ class Users extends REST_Controller {
         $result = $this->user->update_report($data,$this->post('id'));
 
         $this->response($result);
+    }
+
+    public function update_notification_post(){
+        $id = $this->post('id');
+
+        $result = $this->user->update_notifs($id);
+
+        $this->response($result);
+    }
+
+    public function lockout_post(){
+        $id = $this->post('id');
+
+        $result = $this->user->lockout($id);
+
+        $this->response($result);
+    }
+
+    public function get_project_count_get(){
+        $result = $this->admin->get_project_count();
+
+        $this->response($result);
+
+    }
+
+    public function try_get(){
+
+        $handle = fopen('zip://localhost/files.rar#1.pdf', 'r'); 
+        $result = '';
+        while (!feof($handle)) {
+          $result .= fread($handle, 8192);
+        }
+        fclose($handle);
+        
+        // $result = file_get_contents('zip://localhost/files.rar#1.pdf');
+
+        // $result = file_get_contents('zip://test.zip#test.txt');
+
+        $this->response($result);
+
+    }
+
+    public function archive_db_get(){
+        $date = date('Y-m');
+
+        $result = $this->admin->archive_db();
+
+        
+
+        $this->response($result);
+    }
+
+    public function archive_db_post(){
+        $date = date('Y m');
+
+
+
+        $this->response($date);
     }
 
 }

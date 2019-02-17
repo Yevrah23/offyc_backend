@@ -33,16 +33,16 @@ class user_m extends CI_Model{
 
 	}
 
-	public function update_user($info, $cred){
+	public function update_user($info, $cred,$id){
 
-		$query = $this->db->select('*')->from('tbluser')->where('user_school_id', $info['ui_school_id'])->get();
+		$query = $this->db->select('*')->from('tbluser')->where('user_school_id', $id)->get();
 
 		if ($query->num_rows() > 0){
-			$this->db->where('tbluserinfo.ui_school_id',$info['ui_school_id']);
+			$this->db->where('tbluserinfo.ui_school_id',$id);
 			$update_info = $this->db->update('tbluserinfo',$info);
 
 
-			$this->db->where('tbluser.user_school_id',$info['ui_school_id']);
+			$this->db->where('tbluser.user_school_id',$id);
 			$update_pass = $this->db->update('tbluser',$cred);
 
 
@@ -157,13 +157,13 @@ class user_m extends CI_Model{
 		if ($p_details){
 			$log = array(
 				'id' => $details['user_id'],
-				'type' => 'Proposal Submission'
+				'type' => $college.':'.'Proposal Submission'
 			);
 			$this->save_log($log);
 
 			$event = array (
 				'start' => date('c'),
-				'title' => $details['proposal_title'],
+				'title' => $college.':'.$details['proposal_title'],
 				'color' => 0,
 				'college' => $college
 			);
@@ -190,11 +190,13 @@ class user_m extends CI_Model{
 		$this->db->where('tblproject_proposals.proposal_id',$id);
 		$p_details = $this->db->update('tblproject_proposals',$details);
 
+		$query = $this->db->select('tbluserinfo.ui_college')->from('tbluserinfo')->where($details['user_id'])->get()->row();
+
 
 		if ($p_details){
 			$log = array(
 				'id' => $details['user_id'],
-				'type' => 'Proposal Submission Revision'
+				'type' => $query.':'.'Proposal Submission Revision'
 			);
 			$this->save_log($log);
 
@@ -250,14 +252,50 @@ class user_m extends CI_Model{
 		return $response;
 	}
 
+	public function update_notifs($id){
+		$this->db->where('tblnotification.notification_receiver',$id);
+		$query = $this->db->update('tblnotification', array('notification_status' => 1));
 
+		if($query){
+			return true;
+		}else{
+			return false;
+		}
+
+	}
+
+	public function lockout($id){
+		$this->db->where('tbluser.user_school_id',$id);
+		$query = $this->db->update('tbluser', array('approved' => 3));
+
+
+		if($query){
+			$log = array(
+				'id' => $id,
+				'type' => $query.':'.'Locked Out'
+			);
+			$this->save_log($log);
+
+
+			$notif = array (
+				'notification_sender' => $id,
+				'notification_receiver' => '2015101246',
+				'notification_status' => 0,
+				'notif_type_id' => 6
+			);
+			$this->set_notifs($notif);
+			return true;
+		}else{
+			return false;
+		}
+	}
 
 
 	public function upload_file($data){
 		$query = $this->db->select('*')->from('tbluserinfo')->where('ui_school_id',$data['id'])->get()->row();
 		if ($query){
-			if (isset($_FILES['upload'])) {
-            $file_info = pathinfo($_FILES['upload']['name']);                    // Uploaded Image Info
+			if (isset($_FILES['upload0'])) {
+            $file_info = pathinfo($_FILES['upload0']['name']);                    // Uploaded Image Info
             $maxsize = 2097152;             // Restricts 2MB images only
             $bool_image_size = true;               // Stores boolean value for image size
             $bool_image_type = true;               // Stores boolean value for image type/format
@@ -270,21 +308,27 @@ class user_m extends CI_Model{
                 $filename = $data['folder'];
                 $newname = $data['file_type'].'.'.$ext; 
 
-                if (!file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/')) {
-					mkdir('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/', 0777, true);
-                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
-				}else if(file_exists('C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname)){
-                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
+                if (!file_exists('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/')) {
+					mkdir('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/', 0777, true);
+                	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
+				}else if(file_exists('C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname)){
+                	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
                 	unlink($target);
 				}else{
-                	$target = 'C:/Users/Acer/Desktop/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
+                	$target = 'C:/xampp/htdocs/offyc/src/assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname;
 				}
 
-                    move_uploaded_file( $_FILES['upload']['tmp_name'], $target);
+                    move_uploaded_file( $_FILES['upload0']['tmp_name'], $target);
                     $this->db->where('tblproject_proposals.proposal_title',$filename);
-		            $cover_update = $this->db->update('tblproject_proposals',array(
+		            if ($data['file_type'] == "proposal"){
+		            	$cover_update = $this->db->update('tblproject_proposals',array(
 		            		'proposal_directory' => '../../../assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname,
-		            	));                           
+		            	));
+		            }else{
+		            	$cover_update = $this->db->update('tblproject_proposals',array(
+		            		'report_directory' => '../../../assets/uploaded_files/'.$query->ui_college.'/'.$query->ui_dept.'/'.$filename.'/'.$newname,
+		            	));
+		            }                           
 
             } 
             else {
@@ -390,6 +434,21 @@ class user_m extends CI_Model{
 		$query = $this->db->update('tblproject_proposals',$data);
 
 		if($query){
+			// $log = array(
+			// 	'id' => $details['user_id'],
+			// 	'type' => $query.':'.'Accomplisment Report Submission'
+			// );
+			// $this->save_log($log);
+
+
+			// $notif = array (
+			// 	'notification_sender' => $details['user_id'],
+			// 	'notification_receiver' => '2015101246',
+			// 	'notification_status' => 0,
+			// 	'notif_type_id' => 5
+			// );
+			// $this->set_notifs($notif);
+
 			return true;
 		}else{
 			return false;
